@@ -890,7 +890,7 @@ const App = () => {
         </AuthProvider>
       </ThemeProvider>
     </LanguageProvider>
-  );
+  );  
 };
 
 export default App;
