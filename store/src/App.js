@@ -7,6 +7,9 @@ function App() {
         <p>Tu tienda en línea</p>
         <p>Tu mejor opcion</p>
       </header>
+      <body>
+        <h2>dsfs</h2>
+      </body>
     </div>
   );
 }
