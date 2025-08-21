@@ -1,9 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 export default function App() {
   const [language, setLanguage] = useState("ES");
-  const [screen, setScreen] = useState("home"); // home, login, register
   const [menuOpen, setMenuOpen] = useState(false);
+  const [screen, setScreen] = useState("home"); // home, login, register
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -12,6 +12,8 @@ export default function App() {
   });
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
 
   // Traducciones
   const texts = {
@@ -33,11 +35,14 @@ export default function App() {
       loginBtn: "Iniciar sesión",
       registerBtn: "Crear cuenta",
       back: "Volver",
+      logout: "Cerrar sesión",
       loginSuccess: "¡Inicio de sesión exitoso!",
       registerSuccess: "¡Registro exitoso! Ahora puedes iniciar sesión.",
       fillAll: "Por favor, completa todos los campos.",
       passMatch: "Las contraseñas no coinciden.",
+      alreadyLoggedIn: "Ya has iniciado sesión.",
       welcomeUser: (name) => `¡Bienvenido, ${name}!`,
+      logoutConfirm: "¿Seguro que deseas cerrar sesión?",
     },
     EN: {
       home: "Home",
@@ -57,11 +62,14 @@ export default function App() {
       loginBtn: "Login",
       registerBtn: "Create account",
       back: "Back",
+      logout: "Logout",
       loginSuccess: "Login successful!",
       registerSuccess: "Registration successful! You can now log in.",
       fillAll: "Please fill in all fields.",
       passMatch: "Passwords do not match.",
+      alreadyLoggedIn: "You are already logged in.",
       welcomeUser: (name) => `Welcome, ${name}!`,
+      logoutConfirm: "Are you sure you want to log out?",
     },
   };
 
@@ -92,10 +100,14 @@ export default function App() {
       setError(t.fillAll);
       return;
     }
-    // Simulación de login exitoso
+    // Simulamos login exitoso
+    setIsAuthenticated(true);
+    setCurrentUser(formData.name || formData.email.split("@")[0]);
     setError("");
     setSuccess(t.loginSuccess);
-    setTimeout(() => setScreen("home"), 1000);
+    setTimeout(() => {
+      setScreen("home");
+    }, 1000);
   };
 
   const handleRegister = (e) => {
@@ -115,6 +127,23 @@ export default function App() {
     setTimeout(() => setScreen("login"), 2000);
   };
 
+  const handleLogout = () => {
+    if (window.confirm(t.logoutConfirm)) {
+      setIsAuthenticated(false);
+      setCurrentUser(null);
+      setScreen("home");
+    }
+  };
+
+  // Protección de rutas: si está autenticado, no puede ir a login/register
+  useEffect(() => {
+    if (isAuthenticated && (screen === "login" || screen === "register")) {
+      setScreen("home");
+      setSuccess(t.alreadyLoggedIn);
+      setTimeout(() => setSuccess(""), 3000);
+    }
+  }, [isAuthenticated, screen, t.alreadyLoggedIn]);
+
   const renderFormHeader = (title) => (
     <div className="text-center mb-6">
       <h2 className="text-2xl font-bold text-gray-800">{title}</h2>
@@ -127,6 +156,19 @@ export default function App() {
     <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md transition-all">
       {renderFormHeader(t.login)}
       <form onSubmit={handleLogin} className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            {t.name}
+          </label>
+          <input
+            type="text"
+            name="name"
+            value={formData.name}
+            onChange={handleChange}
+            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500"
+            placeholder={t.name}
+          />
+        </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             {t.email}
@@ -245,7 +287,7 @@ export default function App() {
       </form>
       <div className="mt-4 text-center">
         <p>
-          {t.alreadyHaveAccount}?{" "}
+          {t.login}?{" "}
           <button
             onClick={() => setScreen("login")}
             className="text-green-600 hover:underline font-medium"
@@ -269,7 +311,10 @@ export default function App() {
       <header className="bg-white shadow-md sticky top-0 z-50">
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
           {/* Logo */}
-          <div className="text-2xl font-bold text-pink-600 cursor-pointer" onClick={() => setScreen("home")}>
+          <div
+            className="text-2xl font-bold text-pink-600 cursor-pointer"
+            onClick={() => setScreen("home")}
+          >
             Stor
           </div>
 
@@ -302,7 +347,7 @@ export default function App() {
             </a>
           </nav>
 
-          {/* Auth y Idioma */}
+          {/* Auth y Usuario */}
           <div className="flex items-center space-x-4">
             <button
               onClick={toggleLanguage}
@@ -310,21 +355,38 @@ export default function App() {
             >
               {t.changeLang}
             </button>
-            {screen !== "login" && (
-              <button
-                onClick={() => setScreen("login")}
-                className="text-sm font-medium text-blue-600 hover:text-blue-800 transition"
-              >
-                {t.login}
-              </button>
-            )}
-            {screen !== "register" && (
-              <button
-                onClick={() => setScreen("register")}
-                className="text-sm font-medium text-green-600 hover:text-green-800 transition"
-              >
-                {t.register}
-              </button>
+
+            {isAuthenticated ? (
+              <div className="flex items-center space-x-4">
+                <span className="text-sm text-gray-700">
+                  {t.welcomeUser(currentUser)}
+                </span>
+                <button
+                  onClick={handleLogout}
+                  className="text-sm text-red-600 hover:text-red-800 font-medium"
+                >
+                  {t.logout}
+                </button>
+              </div>
+            ) : (
+              <>
+                {screen !== "login" && (
+                  <button
+                    onClick={() => setScreen("login")}
+                    className="text-sm font-medium text-blue-600 hover:text-blue-800 transition"
+                  >
+                    {t.login}
+                  </button>
+                )}
+                {screen !== "register" && (
+                  <button
+                    onClick={() => setScreen("register")}
+                    className="text-sm font-medium text-green-600 hover:text-green-800 transition"
+                  >
+                    {t.register}
+                  </button>
+                )}
+              </>
             )}
           </div>
 
@@ -387,7 +449,7 @@ export default function App() {
         )}
       </header>
 
-      {/* Estilos para el efecto de subrayado animado */}
+      {/* Estilos para el subrayado animado */}
       <style jsx>{`
         .nav-link::after {
           content: "";
@@ -413,16 +475,30 @@ export default function App() {
             </h1>
             <p className="text-lg text-gray-600 mb-2">{t.tagline1}</p>
             <p className="text-lg text-gray-600">{t.tagline2}</p>
-            <img
-              src="https://placehold.co/600x300/f8f9fa/6c757d?text=Stor+Products"
-              alt="Stor"
-              className="mx-auto mt-8 rounded-lg shadow-md"
-            />
+            {isAuthenticated ? (
+              <div className="mt-6">
+                <p className="text-xl text-green-600">
+                  {t.welcomeUser(currentUser)} 👋
+                </p>
+                <button
+                  onClick={handleLogout}
+                  className="mt-4 px-6 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition"
+                >
+                  {t.logout}
+                </button>
+              </div>
+            ) : (
+              <img
+                src="https://placehold.co/600x300/f8f9fa/6c757d?text=Stor+Products"
+                alt="Stor"
+                className="mx-auto mt-8 rounded-lg shadow-md"
+              />
+            )}
           </div>
         )}
 
-        {screen === "login" && <LoginForm />}
-        {screen === "register" && <RegisterForm />}
+        {screen === "login" && !isAuthenticated && <LoginForm />}
+        {screen === "register" && !isAuthenticated && <RegisterForm />}
       </main>
     </div>
   );
